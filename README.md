@@ -2,7 +2,7 @@
 
 ## Description 💭
 
-This is a simple script that allows you to clone a GitHub Organization or User's repositories in a visual way.
+This is a simple script that allows you to clone a GitHub Organization or User's repositories in a visual manner.
 
 ## Installation 🛠️
 
