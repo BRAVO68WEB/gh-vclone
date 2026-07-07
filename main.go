@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cli/go-gh/v2"
 	"github.com/gdamore/tcell/v2"
@@ -80,8 +81,27 @@ func renderRepo(repoList []Repository, uname string) {
 	// Add a footer to the list
 	list.SetBorder(true).SetTitle("Press Enter to select a repository")
 
-	layout := tview.NewFlex().SetDirection(tview.FlexRow).
+	inputField := tview.NewInputField().
+		SetLabel("Search: ").
+		SetPlaceholder("filter repos...").
+		SetFieldWidth(30)
+	searchMode := false
+	updateList := func(text string) {
+		list.Clear()
+		searchTerm := strings.ToLower(strings.TrimSpace(text))
+		for _, repo := range repoList {
+			if searchTerm == "" ||
+				strings.Contains(strings.ToLower(repo.Name), searchTerm) ||
+				strings.Contains(strings.ToLower(repo.Description), searchTerm) {
+				list.AddItem(repo.Name, repo.Description, 0, nil)
+			}
+		}
+	}
+	updateList("")
+	flex := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(inputField, 0, 1, false).
 		AddItem(list, 0, 1, true)
+	hideSearch(flex, inputField, app)
 
 	render := func(page int) {
 		list.Clear()
@@ -89,7 +109,7 @@ func renderRepo(repoList []Repository, uname string) {
 		for _, repo := range Repos {
 			list.AddItem(repo.Name, repo.Description, 0, nil)
 		}
-		layout.SetBorder(true).SetTitle(fmt.Sprintf("Page %d/%d", page+1, totalPages))
+		flex.SetBorder(true).SetTitle(fmt.Sprintf("Page %d/%d", page+1, totalPages))
 	}
 	render(currentPage)
 	userSelected := false
@@ -116,10 +136,29 @@ func renderRepo(repoList []Repository, uname string) {
 			}
 			return nil
 		}
+		if event.Rune() == '/' {
+			searchMode = true
+			showSearch(flex, inputField, app)
+			return nil
+		}
 		return event
 	})
+	inputField.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyEnter {
+			searchMode = false
+			hideSearch(flex, inputField, app)
+			app.SetFocus(list)
+			return nil
+		}
+		return event
+	})
+	inputField.SetChangedFunc(func(text string) {
+		if searchMode {
+			updateList(text)
+		}
+	})
 
-	if err := app.SetRoot(layout, true).Run(); err != nil {
+	if err := app.SetRoot(flex, true).Run(); err != nil {
 		panic(err)
 	}
 
@@ -139,6 +178,14 @@ func renderRepo(repoList []Repository, uname string) {
 	}
 }
 
+func showSearch(flex *tview.Flex, inputField *tview.InputField, app *tview.Application) {
+	flex.ResizeItem(inputField, 2, 0)
+	app.SetFocus(inputField)
+}
+func hideSearch(flex *tview.Flex, inputField *tview.InputField, app *tview.Application) {
+	inputField.SetText("")
+	flex.ResizeItem(inputField, 0, 0)
+}
 func runSearch(opts *SearchOptions) error {
 	args := []string{"api", "users/" + opts.Query, "--jq", ".type"}
 
