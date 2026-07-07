@@ -16,6 +16,11 @@ gh extension install bravo68web/gh-vclone
 gh vclone <user/org>
 ```
 
+### Additional features
+
+- Search functionality
+- Paginated Results
+
 ## License 📝
 
 [MIT](LICENSE.md)
