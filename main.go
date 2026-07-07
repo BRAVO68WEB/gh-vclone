@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cli/go-gh/v2"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
@@ -75,13 +77,33 @@ func runSearch(opts *SearchOptions) error {
 		}
 
 		app := tview.NewApplication()
-
 		list := tview.NewList()
+
+		inputField := tview.NewInputField().
+			SetLabel("Enter a number: ").
+			SetPlaceholder("any text..").
+			SetFieldWidth(30).
+			SetDoneFunc(func(key tcell.Key) {
+				app.Stop()
+			})
+		if err := app.SetRoot(inputField, true).EnableMouse(true).Run(); err != nil {
+			panic(err)
+		}
+
+		searchTerm := strings.ToLower(strings.TrimSpace(inputField.GetText()))
+		var filteredRepos []Repository
+		for _, repo := range repoList {
+			fmt.Printf("📚 Repository: %s\n", repo.Name)
+			fmt.Printf("� Description %s\n", repo.Description)
+			if strings.Contains(strings.ToLower(repo.Name), searchTerm) || strings.Contains(strings.ToLower(repo.Description), searchTerm) {
+				filteredRepos = append(filteredRepos, repo)
+			}
+		}
 
 		// Add a footer to the list
 		list.SetBorder(true).SetTitle("Press Enter to select a repository")
 
-		for _, repo := range repoList {
+		for _, repo := range filteredRepos {
 			list.AddItem(repo.Name, repo.Description, '*', nil)
 		}
 
@@ -134,13 +156,32 @@ func runSearch(opts *SearchOptions) error {
 		}
 
 		app := tview.NewApplication()
-
 		list := tview.NewList()
 
-		// Add a footer to the list
+		inputField := tview.NewInputField().
+			SetLabel("Enter a repo: ").
+			SetPlaceholder("any text..").
+			SetFieldWidth(30).
+			SetDoneFunc(func(key tcell.Key) {
+				app.Stop()
+			})
+		if err := app.SetRoot(inputField, true).EnableMouse(true).Run(); err != nil {
+			panic(err)
+		}
+
+		searchTerm := strings.ToLower(strings.TrimSpace(inputField.GetText()))
+		var filteredRepos []Repository
+		for _, repo := range repoList {
+			if strings.Contains(strings.ToLower(repo.Name), searchTerm) {
+				filteredRepos = append(filteredRepos, repo)
+			} else if strings.Contains(strings.ToLower(repo.Description), searchTerm) {
+				filteredRepos = append(filteredRepos, repo)
+			}
+		}
+
 		list.SetBorder(true).SetTitle("Press Enter to select a repository")
 
-		for _, repo := range repoList {
+		for _, repo := range filteredRepos {
 			list.AddItem(repo.Name, repo.Description, '*', nil)
 		}
 
